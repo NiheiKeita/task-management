@@ -68,7 +68,6 @@ export const Top = React.memo(function Top() {
         emojiPalette,
         categoryOptions,
         categoryStats,
-        tasksByStatus,
         dueSoonTasks,
         overdueTasks,
         calendarEvents,
@@ -130,20 +129,11 @@ export const Top = React.memo(function Top() {
         percent: summary.averageProgress,
     }), [summary])
 
-    const statusSummary = useMemo(() => ([
-        { label: '未着手', count: tasksByStatus.notStarted.length, tone: 'text-gray-500 bg-white/80' },
-        { label: '進行中', count: tasksByStatus.inProgress.length, tone: 'text-amber-600 bg-amber-100/70' },
-        { label: '完了', count: tasksByStatus.done.length, tone: 'text-emerald-600 bg-emerald-100/70' },
-    ]), [tasksByStatus])
 
     const assigneeOptions = useMemo(() => (
         members.map(member => ({ id: member.id, label: member.name, role: member.role }))
     ), [members])
 
-    const urgencySummary = useMemo(() => ({
-        dueSoon: dueSoonTasks.length,
-        overdue: overdueTasks.length,
-    }), [dueSoonTasks, overdueTasks])
 
     const dueSoonSet = useMemo(() => new Set(dueSoonTasks.map(task => task.id)), [dueSoonTasks])
     const overdueSet = useMemo(() => new Set(overdueTasks.map(task => task.id)), [overdueTasks])
@@ -197,6 +187,7 @@ export const Top = React.memo(function Top() {
 
         setCategoryError(null)
         setNewCategory({ name: '', accent: newCategory.accent })
+        setCategoryModalOpen(false)
     }
 
     const handleMemberSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -226,6 +217,7 @@ export const Top = React.memo(function Top() {
             contactEmail: '',
             contactLineId: '',
         })
+        setMemberModalOpen(false)
     }
 
     return (
@@ -250,50 +242,17 @@ export const Top = React.memo(function Top() {
                         </div>
                     </div>
                 </header>
-                <section className='grid gap-3 md:grid-cols-2 xl:grid-cols-4'>
-                    <div className='rounded-3xl border border-rose-100 bg-white/80 p-4 shadow-sm'>
-                        <h3 className='text-sm font-semibold text-rose-500'>ステータス概要</h3>
-                        <ul className='mt-3 space-y-1 text-[12px] font-semibold text-gray-600'>
-                            {statusSummary.map(item => (
-                                <li key={item.label} className={`flex items-center justify-between rounded-2xl px-3 py-1.5 ${item.tone}`}>
-                                    <span>{item.label}</span>
-                                    <span>{item.count}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                    <div className='rounded-3xl border border-amber-100 bg-amber-50/70 p-4 shadow-sm'>
-                        <h3 className='text-sm font-semibold text-amber-600'>期限アラート</h3>
-                        <div className='mt-3 space-y-2 text-[12px] font-semibold text-amber-700'>
-                            <p>まもなく期限: {urgencySummary.dueSoon} 件</p>
-                            <p>期限超過: {urgencySummary.overdue} 件</p>
-                        </div>
-                        <button
-                            type='button'
-                            onClick={() => setCalendarOpen(true)}
-                            className='mt-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-amber-600 shadow hover:bg-amber-100'
-                        >
-                            📅 カレンダーを見る
-                        </button>
-                    </div>
-                    <div className='rounded-3xl border border-sky-100 bg-sky-50/70 p-4 shadow-sm md:col-span-2 xl:col-span-2'>
-                        <h3 className='text-sm font-semibold text-sky-600'>期限が近いタスク</h3>
-                        <ul className='mt-3 space-y-1 text-[12px] text-gray-600'>
-                            {dueSoonTasks.length === 0 ? (
-                                <li className='rounded-2xl bg-white/70 px-3 py-2 text-gray-400'>期限が近いタスクはありません</li>
-                            ) : dueSoonTasks.slice(0, 4).map(task => (
-                                <li key={task.id} className='flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-white/80 px-3 py-2'>
-                                    <span className='font-semibold'>{task.title}</span>
-                                    <span className='text-[11px] text-sky-500'>期限 {task.due}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </section>
                 <div className='flex flex-col gap-4 lg:flex-row lg:items-start'>
                     <section className='flex-1 rounded-3xl bg-white/75 p-3 shadow-xl backdrop-blur'>
                         <div className='flex flex-wrap items-center justify-between gap-2'>
                             <h2 className='text-lg font-bold text-rose-500'>🌸 新しいタスクを追加</h2>
+                            <button
+                                type='button'
+                                onClick={() => setCalendarOpen(true)}
+                                className='inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-semibold text-amber-600 shadow hover:bg-amber-100'
+                            >
+                                📅 カレンダーを見る
+                            </button>
                         </div>
                         <form onSubmit={handleTaskSubmit} className='mt-3 grid gap-2 lg:grid-cols-[2fr,1.2fr,1.2fr,1fr,0.8fr,auto] lg:items-end'>
                             <label className='flex flex-col text-[11px] font-semibold text-gray-500'>
@@ -398,42 +357,24 @@ export const Top = React.memo(function Top() {
                     </section>
 
                     <section className='w-full max-w-xs rounded-3xl bg-white/75 p-3 shadow-xl backdrop-blur lg:max-w-sm xl:max-w-xs'>
-                        <h2 className='text-lg font-bold text-rose-500'>🎨 カテゴリ設定</h2>
-                        <form onSubmit={handleCategorySubmit} className='mt-2 space-y-1.5'>
-                            <label className='flex flex-col text-[11px] font-semibold text-gray-500'>
-                                <span>カテゴリ名</span>
-                                <input
-                                    type='text'
-                                    value={newCategory.name}
-                                    onChange={event => setNewCategory(state => ({ ...state, name: event.target.value }))}
-                                    placeholder='例: 料理打ち合わせ'
-                                    className='mt-1 w-full rounded-lg border border-pink-100 bg-white/90 px-2 py-1 text-xs shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200'
-                                />
-                            </label>
-                            <label className='flex flex-col text-[11px] font-semibold text-gray-500'>
-                                <span>テーマカラー</span>
-                                <select
-                                    value={newCategory.accent}
-                                    onChange={event => setNewCategory(state => ({ ...state, accent: event.target.value as AccentToken }))}
-                                    className='mt-1 w-full rounded-lg border border-pink-100 bg-white/90 px-2 py-1 text-xs shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200'
-                                >
-                                    {accentOptions.map(option => (
-                                        <option key={option.token} value={option.token}>
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
+                        <div className='space-y-3'>
                             <button
-                                type='submit'
-                                className='h-7 w-full rounded-lg bg-rose-400 text-[11px] font-semibold text-white shadow transition hover:bg-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-200'
+                                type='button'
+                                onClick={() => setCategoryModalOpen(true)}
+                                className='flex w-full items-center justify-center gap-2 rounded-lg bg-rose-400 px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-200'
                             >
-                                カテゴリを追加
+                                🎨 カテゴリを追加
                             </button>
-                        </form>
-                        {categoryError ? (
-                            <p className='mt-2 text-xs font-semibold text-rose-500'>{categoryError}</p>
-                        ) : null}
+
+                            <button
+                                type='button'
+                                onClick={() => setMemberModalOpen(true)}
+                                className='flex w-full items-center justify-center gap-2 rounded-lg bg-blue-400 px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
+                            >
+                                🤝 メンバーを追加
+                            </button>
+                        </div>
+
                         <div className='mt-5 border-t border-rose-100 pt-4'>
                             <h3 className='text-sm font-semibold text-rose-500'>🤝 チームメンバー</h3>
                             <ul className='mt-2 space-y-2 text-[11px] text-gray-600'>
@@ -452,57 +393,6 @@ export const Top = React.memo(function Top() {
                                     </li>
                                 ))}
                             </ul>
-                            <form onSubmit={handleMemberSubmit} className='mt-3 grid gap-2'>
-                                <label className='flex flex-col text-[11px] font-semibold text-gray-500'>
-                                    <span>メンバー名</span>
-                                    <input
-                                        type='text'
-                                        value={newMember.name}
-                                        onChange={event => setNewMember(state => ({ ...state, name: event.target.value }))}
-                                        placeholder='例: さやか'
-                                        className='mt-1 w-full rounded-lg border border-pink-100 bg-white/90 px-2 py-1 text-xs shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200'
-                                    />
-                                </label>
-                                <label className='flex flex-col text-[11px] font-semibold text-gray-500'>
-                                    <span>役割</span>
-                                    <input
-                                        type='text'
-                                        value={newMember.role}
-                                        onChange={event => setNewMember(state => ({ ...state, role: event.target.value }))}
-                                        placeholder='例: プランナー'
-                                        className='mt-1 w-full rounded-lg border border-pink-100 bg-white/90 px-2 py-1 text-xs shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200'
-                                    />
-                                </label>
-                                <label className='flex flex-col text-[11px] font-semibold text-gray-500'>
-                                    <span>メール</span>
-                                    <input
-                                        type='email'
-                                        value={newMember.contactEmail}
-                                        onChange={event => setNewMember(state => ({ ...state, contactEmail: event.target.value }))}
-                                        placeholder='例: planner@example.com'
-                                        className='mt-1 w-full rounded-lg border border-pink-100 bg-white/90 px-2 py-1 text-xs shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200'
-                                    />
-                                </label>
-                                <label className='flex flex-col text-[11px] font-semibold text-gray-500'>
-                                    <span>LINE ID</span>
-                                    <input
-                                        type='text'
-                                        value={newMember.contactLineId}
-                                        onChange={event => setNewMember(state => ({ ...state, contactLineId: event.target.value }))}
-                                        placeholder='例: @planner123'
-                                        className='mt-1 w-full rounded-lg border border-pink-100 bg-white/90 px-2 py-1 text-xs shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200'
-                                    />
-                                </label>
-                                <button
-                                    type='submit'
-                                    className='h-7 w-full rounded-lg bg-rose-400 text-[11px] font-semibold text-white shadow transition hover:bg-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-200'
-                                >
-                                    メンバー追加
-                                </button>
-                            </form>
-                            {memberError ? (
-                                <p className='mt-2 text-xs font-semibold text-rose-500'>{memberError}</p>
-                            ) : null}
                         </div>
                     </section>
                 </div>
@@ -590,7 +480,10 @@ export const Top = React.memo(function Top() {
         />
         <OverlayModal
             isOpen={isCategoryModalOpen}
-            onClose={() => setCategoryModalOpen(false)}
+            onClose={() => {
+                setCategoryModalOpen(false)
+                setCategoryError(null)
+            }}
             title='カテゴリを登録'
         >
             <form onSubmit={handleCategorySubmit} className='space-y-3 text-[13px]'>
@@ -631,7 +524,10 @@ export const Top = React.memo(function Top() {
         </OverlayModal>
         <OverlayModal
             isOpen={isMemberModalOpen}
-            onClose={() => setMemberModalOpen(false)}
+            onClose={() => {
+                setMemberModalOpen(false)
+                setMemberError(null)
+            }}
             title='チームメンバーを追加'
         >
             <form onSubmit={handleMemberSubmit} className='grid gap-3 text-[13px]'>
