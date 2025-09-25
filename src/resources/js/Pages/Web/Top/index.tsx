@@ -1,12 +1,12 @@
 
 import React from 'react'
 
-export const Dashboard = React.memo(function Dashboard() {
+export const Top = React.memo(function Top() {
     return (
         <p className='text-2xl font-bold text-gray-700'>
-            Dashboard
+            Top
         </p>
     )
 
 })
-export default Dashboard
+export default Top
