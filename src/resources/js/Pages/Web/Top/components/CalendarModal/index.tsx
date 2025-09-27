@@ -31,6 +31,93 @@ const addMonths = (base: Date, offset: number) => {
 
 const formatDateKey = (date: Date) => date.toISOString().split('T')[0]
 
+// 日本の祝日データ（2024-2027年）
+const JAPANESE_HOLIDAYS = new Set([
+    // 2024年
+    '2024-01-01', // 元日
+    '2024-01-08', // 成人の日
+    '2024-02-11', // 建国記念の日
+    '2024-02-12', // 振替休日
+    '2024-03-20', // 春分の日
+    '2024-04-29', // 昭和の日
+    '2024-05-03', // 憲法記念日
+    '2024-05-04', // みどりの日
+    '2024-05-05', // こどもの日
+    '2024-05-06', // 振替休日
+    '2024-07-15', // 海の日
+    '2024-08-11', // 山の日
+    '2024-08-12', // 振替休日
+    '2024-09-16', // 敬老の日
+    '2024-09-22', // 秋分の日
+    '2024-09-23', // 振替休日
+    '2024-10-14', // スポーツの日
+    '2024-11-03', // 文化の日
+    '2024-11-04', // 振替休日
+    '2024-11-23', // 勤労感謝の日
+    // 2025年
+    '2025-01-01', // 元日
+    '2025-01-13', // 成人の日
+    '2025-02-11', // 建国記念の日
+    '2025-02-23', // 天皇誕生日
+    '2025-02-24', // 振替休日
+    '2025-03-20', // 春分の日
+    '2025-04-29', // 昭和の日
+    '2025-05-03', // 憲法記念日
+    '2025-05-04', // みどりの日
+    '2025-05-05', // こどもの日
+    '2025-07-21', // 海の日
+    '2025-08-11', // 山の日
+    '2025-09-15', // 敬老の日
+    '2025-09-23', // 秋分の日
+    '2025-10-13', // スポーツの日
+    '2025-11-03', // 文化の日
+    '2025-11-23', // 勤労感謝の日
+    '2025-11-24', // 振替休日
+    // 2026年
+    '2026-01-01', // 元日
+    '2026-01-13', // 成人の日
+    '2026-02-11', // 建国記念の日
+    '2026-02-23', // 天皇誕生日
+    '2026-02-24', // 振替休日
+    '2026-03-20', // 春分の日
+    '2026-04-29', // 昭和の日
+    '2026-05-03', // 憲法記念日
+    '2026-05-04', // みどりの日
+    '2026-05-05', // こどもの日
+    '2026-05-06', // 振替休日
+    '2026-07-20', // 海の日
+    '2026-08-11', // 山の日
+    '2026-09-21', // 敬老の日
+    '2026-09-22', // 秋分の日
+    '2026-09-23', // 国民の休日
+    '2026-10-12', // スポーツの日
+    '2026-11-03', // 文化の日
+    '2026-11-23', // 勤労感謝の日
+    // 2027年
+    '2027-01-01', // 元日
+    '2027-01-13', // 成人の日
+    '2027-02-11', // 建国記念の日
+    '2027-02-23', // 天皇誕生日
+    '2027-02-24', // 振替休日
+    '2027-03-21', // 春分の日
+    '2027-04-29', // 昭和の日
+    '2027-05-03', // 憲法記念日
+    '2027-05-04', // みどりの日
+    '2027-05-05', // こどもの日
+    '2027-07-19', // 海の日
+    '2027-08-11', // 山の日
+    '2027-09-20', // 敬老の日
+    '2027-09-23', // 秋分の日
+    '2027-10-13', // スポーツの日
+    '2027-11-03', // 文化の日
+    '2027-11-23' // 勤労感謝の日
+])
+
+const isHoliday = (date: Date) => {
+    const dateKey = formatDateKey(date)
+    return JAPANESE_HOLIDAYS.has(dateKey)
+}
+
 const getCalendarDays = (anchor: Date) => {
     const year = anchor.getFullYear()
     const month = anchor.getMonth()
@@ -77,9 +164,9 @@ export const CalendarModal = ({ isOpen, onClose, events, onDateSelect, showDateS
     return (
         <div className='fixed inset-0 z-40 flex items-center justify-center bg-black/30 px-4 py-6 backdrop-blur-sm'>
             <div className='relative flex max-h-[90vh] w-full max-w-4xl flex-col rounded-3xl bg-white p-6 shadow-2xl'>
-                <div className='flex items-center justify-between gap-3'>
-                    <div>
-                        <h2 className='text-xl font-bold text-rose-500'>カレンダー</h2>
+                <div className='relative flex items-center justify-center gap-3'>
+                    <div className='absolute left-0'>
+                        <h2 className='text-lg font-bold text-rose-500'>カレンダー</h2>
                     </div>
                     <div className='flex items-center gap-2'>
                         <button
@@ -89,7 +176,7 @@ export const CalendarModal = ({ isOpen, onClose, events, onDateSelect, showDateS
                         >
                             ◀︎
                         </button>
-                        <span className='text-sm font-semibold text-gray-600'>{displayLabel}</span>
+                        <span className='text-sm font-semibold text-gray-600' style={{ fontSize: '90%' }}>{displayLabel}</span>
                         <button
                             type='button'
                             onClick={() => setMonthOffset(value => value + 1)}
@@ -101,7 +188,7 @@ export const CalendarModal = ({ isOpen, onClose, events, onDateSelect, showDateS
                     <button
                         type='button'
                         onClick={onClose}
-                        className='flex h-8 w-8 items-center justify-center rounded-full text-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                        className='absolute right-0 flex h-10 w-10 items-center justify-center rounded-full text-xl text-gray-400 hover:bg-gray-100 hover:text-gray-600'
                     >
                         ×
                     </button>
@@ -127,6 +214,7 @@ export const CalendarModal = ({ isOpen, onClose, events, onDateSelect, showDateS
                         const monthDiff = day.getMonth() - displayDate.getMonth()
                         const isCurrentMonth = monthDiff === 0 || monthDiff === -11 || monthDiff === 11
                         const isToday = formatDateKey(day) === formatDateKey(today)
+                        const isJapaneseHoliday = isHoliday(day)
                         const dayEvents = eventsByDate.get(key) ?? []
 
 
@@ -144,7 +232,7 @@ export const CalendarModal = ({ isOpen, onClose, events, onDateSelect, showDateS
                                 onClick={handleDateClick}
                             >
                                 <span
-                                    className={`text-right text-xs font-bold ${day.getDay() === 0 ? 'text-rose-500' : day.getDay() === 6 ? 'text-sky-500' : 'text-gray-700'} ${!isCurrentMonth ? 'text-gray-400' : ''}`}
+                                    className={`text-right text-xs font-bold ${day.getDay() === 0 || isJapaneseHoliday ? 'text-rose-500' : day.getDay() === 6 ? 'text-sky-500' : 'text-gray-700'} ${!isCurrentMonth ? 'text-gray-400' : ''}`}
                                 >
                                     {day.getDate()}
                                 </span>

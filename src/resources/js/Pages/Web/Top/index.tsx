@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { TaskCard } from './components/TaskCard'
 import { CalendarModal } from './components/CalendarModal'
 import { useWeddingTaskBoard, ACCENT_STYLES } from './hooks'
+import { useTranslation } from './useTranslation'
+import { languageNames, type Language } from './translations'
 import type { AccentToken } from './hooks'
 
 type TaskFormState = {
@@ -60,6 +62,7 @@ const OverlayModal = ({ isOpen, title, onClose, children }: OverlayModalProps) =
 }
 
 export const Top = React.memo(function Top() {
+    const { language, setLanguage, t } = useTranslation()
     const {
         tasks,
         categories,
@@ -75,6 +78,8 @@ export const Top = React.memo(function Top() {
         membersMap,
         loading,
         error,
+        lastUpdated,
+        refreshData,
         addCategory,
         addTask,
         updateTaskStatus,
@@ -112,7 +117,9 @@ export const Top = React.memo(function Top() {
     const [isCategoryModalOpen, setCategoryModalOpen] = useState(false)
     const [isMemberModalOpen, setMemberModalOpen] = useState(false)
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const [isTaskModalOpen, setTaskModalOpen] = useState(false)
     const [editingMember, setEditingMember] = useState<{ id: string; name: string; role: string; contactEmail: string; contactLineId: string } | null>(null)
+    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('')
 
     useEffect(() => {
         setNewTask(previous => {
@@ -144,6 +151,23 @@ export const Top = React.memo(function Top() {
     const dueSoonSet = useMemo(() => new Set(dueSoonTasks.map(task => task.id)), [dueSoonTasks])
     const overdueSet = useMemo(() => new Set(overdueTasks.map(task => task.id)), [overdueTasks])
 
+    const filteredAndSortedTasks = useMemo(() => {
+        let filtered = tasks
+
+        // カテゴリフィルタリング
+        if (selectedCategoryFilter) {
+            filtered = tasks.filter(task => task.categoryId === selectedCategoryFilter)
+        }
+
+        // 期限順で並び替え（期限なし→最後、期限あり→昇順）
+        return filtered.sort((a, b) => {
+            if (!a.due && !b.due) return 0
+            if (!a.due) return 1
+            if (!b.due) return -1
+            return new Date(a.due).getTime() - new Date(b.due).getTime()
+        })
+    }, [tasks, selectedCategoryFilter])
+
     const handleTaskSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault()
 
@@ -173,6 +197,7 @@ export const Top = React.memo(function Top() {
             due: '',
             assigneeIds: state.assigneeIds,
         }))
+        setTaskModalOpen(false)
     }
 
     const handleCategorySubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -249,7 +274,7 @@ export const Top = React.memo(function Top() {
             <div className='min-h-screen bg-gradient-to-br from-pink-50 via-white to-sky-50 flex items-center justify-center'>
                 <div className='text-center'>
                     <div className='w-8 h-8 border-4 border-rose-200 border-t-rose-500 rounded-full animate-spin mx-auto mb-4'></div>
-                    <p className='text-rose-500 font-semibold'>データを読み込み中...</p>
+                    <p className='text-rose-500 font-semibold'>{t('loadingData')}</p>
                 </div>
             </div>
         )
@@ -261,13 +286,13 @@ export const Top = React.memo(function Top() {
             <div className='min-h-screen bg-gradient-to-br from-pink-50 via-white to-sky-50 flex items-center justify-center px-4'>
                 <div className='text-center max-w-md'>
                     <div className='text-6xl mb-4'>⚠️</div>
-                    <h2 className='text-xl font-bold text-rose-600 mb-2'>エラーが発生しました</h2>
+                    <h2 className='text-xl font-bold text-rose-600 mb-2'>{t('errorOccurred')}</h2>
                     <p className='text-gray-600 mb-4'>{error}</p>
                     <button
                         onClick={() => window.location.reload()}
                         className='px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition'
                     >
-                        ページを再読み込み
+                        {t('reloadPage')}
                     </button>
                 </div>
             </div>
@@ -278,8 +303,46 @@ export const Top = React.memo(function Top() {
         <>
         <div className='min-h-screen bg-gradient-to-br from-pink-50 via-white to-sky-50 pb-4 pt-4 md:pb-10 md:pt-8'>
             <div className='mx-auto flex max-w-[92rem] flex-col gap-3 px-3 md:gap-6 md:px-6 xl:px-10'>
-                <header className='relative rounded-3xl bg-white/80 p-4 md:p-6 shadow-xl backdrop-blur'>
-                    <div className='absolute right-4 top-4 md:right-6 md:top-6'>
+                {/* 枠外の右上ボタン群 */}
+                <div className='flex justify-end'>
+                    <div className='flex items-center gap-2'>
+                        {/* 言語切り替えボタン */}
+                        <div className='relative'>
+                            <select
+                                value={language}
+                                onChange={(e) => setLanguage(e.target.value as Language)}
+                                className='flex h-8 w-20 md:w-24 items-center justify-center rounded-lg bg-green-50 px-3 text-[10px] leading-none font-semibold text-green-600 shadow-md transition hover:bg-green-100 focus:outline-none focus:ring-1 focus:ring-green-300'
+                            >
+                                {Object.entries(languageNames).map(([code, name]) => (
+                                    <option key={code} value={code}>
+                                        {name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        {/* 更新ボタン */}
+                        <button
+                            type='button'
+                            onClick={refreshData}
+                            disabled={loading}
+                            className='flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 shadow-md transition hover:bg-blue-100 disabled:opacity-50'
+                            title={t('updateData')}
+                        >
+                            <svg
+                                className={`h-4 w-4 text-blue-600 ${loading ? 'animate-spin' : ''}`}
+                                fill='none'
+                                viewBox='0 0 24 24'
+                                stroke='currentColor'
+                            >
+                                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' />
+                            </svg>
+                        </button>
+                        {/* 最終更新時間 */}
+                        {lastUpdated && (
+                            <span className='text-[9px] md:text-[10px] text-blue-500 font-medium'>
+                                {t('lastUpdated')}: {lastUpdated.toLocaleTimeString(language === 'ko' ? 'ko-KR' : language === 'en' ? 'en-US' : 'ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        )}
                         {/* スマホでは三本線メニュー */}
                         <div className='md:hidden'>
                             <button
@@ -293,134 +356,70 @@ export const Top = React.memo(function Top() {
                             </button>
                         </div>
                     </div>
+                </div>
+
+                <header className='rounded-3xl bg-white/80 p-4 md:p-6 shadow-xl backdrop-blur mb-4'>
                     <div className='flex flex-col items-center gap-3 text-center'>
-                        <h1 className='text-2xl md:text-3xl lg:text-4xl font-extrabold text-rose-500'>
-                            💐 タスクブーケ 💐
+                        <h1 className='text-4xl md:text-6xl lg:text-7xl font-extrabold text-rose-500' style={{ fontFamily: "'Dancing Script', cursive" }}>
+                            💐 {t('title')} 💐
                         </h1>
                         <div className='flex flex-wrap items-center justify-center gap-2 md:gap-4 text-[10px] md:text-xs lg:text-sm font-semibold text-gray-500'>
-                            <span>挙式日：2026年5月2日（土）</span>
-                            <span>式場：アニヴェルセルみなとみらい</span>
+                            <span>{t('weddingDate')}</span>
+                            <span>{t('venue')}</span>
                         </div>
                     </div>
                 </header>
+                <div className='flex items-center gap-2 md:gap-4 mb-4 w-[90%] mx-auto'>
+                    <button
+                        type='button'
+                        onClick={() => setTaskModalOpen(true)}
+                        className='flex-[5] flex items-center justify-center gap-2 rounded-2xl bg-rose-400 px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-200'
+                    >
+                        ✨ {t('addNewTask')}
+                    </button>
+                    <button
+                        type='button'
+                        onClick={() => setCalendarOpen(true)}
+                        className='flex-[3] inline-flex items-center justify-center gap-1 rounded-full bg-amber-50 px-3 py-3 text-xs font-semibold text-amber-600 shadow hover:bg-amber-100'
+                    >
+                        📅 カレンダー
+                    </button>
+                </div>
                 <div className='flex flex-col gap-4 md:flex-row md:items-start'>
-                    <section className='flex-1 rounded-3xl bg-white/75 p-2 md:p-3 shadow-xl backdrop-blur'>
-                        <div className='flex flex-wrap items-center justify-between gap-1 md:gap-2'>
-                            <h2 className='text-sm font-bold text-rose-500'>🌸 新しいタスクを追加</h2>
-                            <button
-                                type='button'
-                                onClick={() => setCalendarOpen(true)}
-                                className='inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-600 shadow hover:bg-amber-100'
-                            >
-                                📅 カレンダーを見る
-                            </button>
-                        </div>
-                        <form onSubmit={handleTaskSubmit} className='mt-2 grid gap-1.5 md:grid-cols-[2fr,1fr,1fr,0.8fr,auto] md:items-end'>
-                            <label className='flex flex-col text-[10px] font-semibold text-gray-500'>
-                                <span>タスク名</span>
-                                <input
-                                    type='text'
-                                    value={newTask.title}
-                                    onChange={event => setNewTask(state => ({ ...state, title: event.target.value }))}
-                                    placeholder='前撮りのスケジュール調整'
-                                    className='mt-0.5 w-full rounded-md border border-pink-100 bg-white/90 px-1.5 py-0.5 text-[11px] shadow-inner focus:border-rose-300 focus:outline-none focus:ring-1 focus:ring-rose-200'
-                                />
-                            </label>
-                            <label className='flex flex-col text-[10px] font-semibold text-gray-500'>
-                                <span>カテゴリ</span>
-                                <select
-                                    value={newTask.categoryId}
-                                    onChange={event => {
-                                        const selectedCategory = categories.find(cat => cat.id === event.target.value)
-                                        setNewTask(state => ({
-                                            ...state,
-                                            categoryId: event.target.value,
-                                            emoji: selectedCategory?.emoji ?? state.emoji
-                                        }))
-                                    }}
-                                    disabled={categoryOptions.length === 0}
-                                    className='mt-0.5 w-full rounded-md border border-pink-100 bg-white/90 px-1.5 py-0.5 text-[11px] shadow-inner focus:border-rose-300 focus:outline-none focus:ring-1 focus:ring-rose-200 disabled:cursor-not-allowed disabled:opacity-60'
-                                >
-                                    {categoryOptions.length === 0 ? (
-                                        <option value=''>カテゴリを追加してください</option>
-                                    ) : null}
-                                    {categoryOptions.map(option => (
-                                        <option key={option.id} value={option.id}>
-                                            {option.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label className='flex flex-col text-[10px] font-semibold text-gray-500'>
-                                <span>担当メンバー</span>
-                                <select
-                                    value={newTask.assigneeIds[0] || ''}
-                                    onChange={event => {
-                                        const selectedId = event.target.value
-                                        setNewTask(state => ({
-                                            ...state,
-                                            assigneeIds: selectedId ? [selectedId] : []
-                                        }))
-                                    }}
-                                    className='mt-0.5 w-full rounded-md border border-pink-100 bg-white/90 px-1.5 py-0.5 text-[11px] shadow-inner focus:border-rose-300 focus:outline-none focus:ring-1 focus:ring-rose-200'
-                                >
-                                    <option value=''>担当者を選択</option>
-                                    {assigneeOptions.map(option => (
-                                        <option key={option.id} value={option.id}>
-                                            {option.label}{option.role ? ` (${option.role})` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label className='flex flex-col text-[10px] font-semibold text-gray-500'>
-                                <span>期限</span>
-                                <div className='flex gap-1'>
-                                    <input
-                                        type='date'
-                                        value={newTask.due}
-                                        onChange={event => setNewTask(state => ({ ...state, due: event.target.value }))}
-                                        className='mt-0.5 flex-1 rounded-md border border-pink-100 bg-white/90 px-1.5 py-0.5 text-[11px] shadow-inner focus:border-rose-300 focus:outline-none focus:ring-1 focus:ring-rose-200'
-                                    />
-                                    <button
-                                        type='button'
-                                        onClick={() => setDatePickerOpen(true)}
-                                        className='mt-0.5 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-600 hover:bg-amber-200 md:hidden'
-                                        title='カレンダーから選択'
-                                    >
-                                        📅
-                                    </button>
-                                </div>
-                            </label>
-                            <button
-                                type='submit'
-                                className='h-6 rounded-md bg-rose-400 px-2 text-[10px] font-semibold text-white shadow transition hover:bg-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-200'
-                            >
-                                追加 ✨
-                            </button>
-                            <label className='flex flex-col text-[10px] font-semibold text-gray-500 md:col-span-6'>
-                                <span>ノート</span>
-                                <textarea
-                                    value={newTask.notes}
-                                    onChange={event => setNewTask(state => ({ ...state, notes: event.target.value }))}
-                                    placeholder='メモを短く残せます'
-                                    rows={1}
-                                    className='mt-0.5 w-full resize-none rounded-md border border-pink-100 bg-white/90 px-1.5 py-0.5 text-[11px] shadow-inner focus:border-rose-300 focus:outline-none focus:ring-1 focus:ring-rose-200'
-                                />
-                            </label>
-                        </form>
-                        {taskError ? (
-                            <p className='mt-1.5 text-[10px] font-semibold text-rose-500'>{taskError}</p>
-                        ) : null}
-                    </section>
 
                     <section className='hidden md:block w-full rounded-3xl bg-white/75 p-3 shadow-xl backdrop-blur md:max-w-xs'>
                         <div className='space-y-3'>
                             <button
                                 type='button'
+                                onClick={() => setTaskModalOpen(true)}
+                                className='flex w-full items-center justify-center gap-2 rounded-lg bg-rose-500 px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-200'
+                            >
+                                ✨ {t('addNewTask')}
+                            </button>
+
+                            <button
+                                type='button'
+                                onClick={refreshData}
+                                disabled={loading}
+                                className='flex w-full items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:opacity-50'
+                            >
+                                <svg
+                                    className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
+                                    fill='none'
+                                    viewBox='0 0 24 24'
+                                    stroke='currentColor'
+                                >
+                                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' />
+                                </svg>
+                                {t('updateData')}
+                            </button>
+
+                            <button
+                                type='button'
                                 onClick={() => setCategoryModalOpen(true)}
                                 className='flex w-full items-center justify-center gap-2 rounded-lg bg-rose-400 px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-200'
                             >
-                                🎨 カテゴリを追加
+                                🎨 {t('addCategory')}
                             </button>
 
                             <button
@@ -428,7 +427,7 @@ export const Top = React.memo(function Top() {
                                 onClick={() => setMemberModalOpen(true)}
                                 className='flex w-full items-center justify-center gap-2 rounded-lg bg-blue-400 px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
                             >
-                                🤝 メンバー管理
+                                🤝 {t('manageMembers')}
                             </button>
                         </div>
                     </section>
@@ -436,32 +435,28 @@ export const Top = React.memo(function Top() {
 
                 <section className='space-y-2 md:space-y-4'>
                     <div className='flex items-center gap-3'>
-                        <h2 className='text-sm font-bold text-rose-500'>🌼 マイタスクリスト</h2>
-                        {categoryStats.length > 0 ? (
-                            <div className='flex gap-1.5'>
-                                {categoryStats.map(stat => {
-                                    const accentStyle = ACCENT_STYLES[stat.category.accent]
-                                    return (
-                                        <div
-                                            key={stat.category.id}
-                                            className={`rounded-lg border ${accentStyle.border} bg-white/70 px-2 py-1 text-[9px] font-semibold text-gray-600 shadow-sm`}
-                                        >
-                                            <span className='text-rose-500'>{stat.category.name}</span>
-                                            <span className='ml-1 text-[8px] text-gray-500'>{stat.total}件</span>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        ) : null}
+                        <h2 className='text-sm font-bold text-rose-500'>🌼 {t('myTaskList')}</h2>
+                        <select
+                            value={selectedCategoryFilter}
+                            onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                            className='rounded-lg border border-rose-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-600 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-1 focus:ring-rose-200'
+                        >
+                            <option value=''>すべてのカテゴリ</option>
+                            {categories.map(category => (
+                                <option key={category.id} value={category.id}>
+                                    {category.emoji} {category.name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
-                    {tasks.length === 0 ? (
+                    {filteredAndSortedTasks.length === 0 ? (
                         <p className='rounded-3xl border border-dashed border-rose-200 bg-white/80 p-8 text-center text-sm text-gray-500'>
-                            まだタスクはありません。上のフォームから追加してみましょう 🌷
+                            {selectedCategoryFilter ? 'このカテゴリにはタスクがありません' : t('noTasksYet')} 🌷
                         </p>
                     ) : (
                         <div className='space-y-3'>
-                            {tasks.map(task => {
+                            {filteredAndSortedTasks.map(task => {
                                 const category = categories.find(item => item.id === task.categoryId)
                                 const accent = category ? ACCENT_STYLES[category.accent] : accentOptions[0]
 
@@ -777,6 +772,17 @@ export const Top = React.memo(function Top() {
                 <button
                     type='button'
                     onClick={() => {
+                        setTaskModalOpen(true)
+                        setMobileMenuOpen(false)
+                    }}
+                    className='flex w-full items-center justify-center gap-2 rounded-lg bg-rose-500 px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-200'
+                >
+                    ✨ 新しいタスクを追加
+                </button>
+
+                <button
+                    type='button'
+                    onClick={() => {
                         setCategoryModalOpen(true)
                         setMobileMenuOpen(false)
                     }}
@@ -807,6 +813,113 @@ export const Top = React.memo(function Top() {
                     📅 カレンダーを見る
                 </button>
             </div>
+        </OverlayModal>
+
+        {/* タスク追加モーダル */}
+        <OverlayModal
+            isOpen={isTaskModalOpen}
+            onClose={() => {
+                setTaskModalOpen(false)
+                setTaskError(null)
+            }}
+            title={t('addNewTask')}
+        >
+            <form onSubmit={handleTaskSubmit} className='space-y-4 text-[13px]'>
+                <label className='flex flex-col gap-1 font-semibold text-gray-600'>
+                    <span>{t('taskName')}</span>
+                    <input
+                        type='text'
+                        value={newTask.title}
+                        onChange={event => setNewTask(state => ({ ...state, title: event.target.value }))}
+                        placeholder={language === 'en' ? 'Pre-wedding photo schedule' : language === 'ko' ? '웨딩 사진 촬영 일정' : '前撮りのスケジュール調整'}
+                        className='rounded-lg border border-pink-100 bg-white/90 px-3 py-2 text-sm shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200'
+                    />
+                </label>
+
+                <div className='grid grid-cols-2 gap-3'>
+                    <label className='flex flex-col gap-1 font-semibold text-gray-600'>
+                        <span>{t('category')}</span>
+                        <select
+                            value={newTask.categoryId}
+                            onChange={event => {
+                                const selectedCategory = categories.find(cat => cat.id === event.target.value)
+                                setNewTask(state => ({
+                                    ...state,
+                                    categoryId: event.target.value,
+                                    emoji: selectedCategory?.emoji ?? state.emoji
+                                }))
+                            }}
+                            disabled={categoryOptions.length === 0}
+                            className='rounded-lg border border-pink-100 bg-white/90 px-3 py-2 text-sm shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200 disabled:cursor-not-allowed disabled:opacity-60'
+                        >
+                            {categoryOptions.length === 0 ? (
+                                <option value=''>{t('addCategory')}</option>
+                            ) : (
+                                <option value=''>{t('selectCategory')}</option>
+                            )}
+                            {categoryOptions.map(option => (
+                                <option key={option.id} value={option.id}>
+                                    {option.name}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+
+                    <label className='flex flex-col gap-1 font-semibold text-gray-600'>
+                        <span>{t('assignedMember')}</span>
+                        <select
+                            value={newTask.assigneeIds[0] || ''}
+                            onChange={event => {
+                                const selectedId = event.target.value
+                                setNewTask(state => ({
+                                    ...state,
+                                    assigneeIds: selectedId ? [selectedId] : []
+                                }))
+                            }}
+                            className='rounded-lg border border-pink-100 bg-white/90 px-3 py-2 text-sm shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200'
+                        >
+                            <option value=''>{t('selectAssignee')}</option>
+                            {assigneeOptions.map(option => (
+                                <option key={option.id} value={option.id}>
+                                    {option.label}{option.role ? ` (${option.role})` : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                </div>
+
+                <label className='flex flex-col gap-1 font-semibold text-gray-600'>
+                    <span>{t('dueDate')}</span>
+                    <input
+                        type='date'
+                        value={newTask.due}
+                        onChange={event => setNewTask(state => ({ ...state, due: event.target.value }))}
+                        className='rounded-lg border border-pink-100 bg-white/90 px-3 py-2 text-sm shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200'
+                    />
+                </label>
+
+                <label className='flex flex-col gap-1 font-semibold text-gray-600'>
+                    <span>{t('notes')}</span>
+                    <textarea
+                        value={newTask.notes}
+                        onChange={event => setNewTask(state => ({ ...state, notes: event.target.value }))}
+                        placeholder={t('shortMemo')}
+                        rows={3}
+                        className='w-full resize-none rounded-lg border border-pink-100 bg-white/90 px-3 py-2 text-sm shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200'
+                    />
+                </label>
+
+                <button
+                    type='submit'
+                    className='w-full rounded-lg bg-rose-400 px-3 py-3 text-sm font-semibold text-white shadow transition hover:bg-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-200'
+                >
+                    {t('addTask')} ✨
+                </button>
+
+                {taskError ? (
+                    <p className='text-xs font-semibold text-rose-500'>{taskError}</p>
+                ) : null}
+            </form>
         </OverlayModal>
         </>
     )

@@ -190,7 +190,7 @@ const INITIAL_TASKS: WeddingTask[] = [
     },
 ]
 
-const EMOJI_PALETTE = ['💐', '💍', '🎀', '🎂', '💌', '🥂', '🌸', '📸', '👗']
+const EMOJI_PALETTE = ['💐', '🎂', '💌', '🥂', '📸', '👗', '👫', '🇰🇷', '✈️', '🎵', '🐶']
 
 const INITIAL_MEMBERS: WeddingMember[] = [
     {
@@ -361,31 +361,66 @@ export const useWeddingTaskBoard = () => {
     const [members, setMembers] = useState<WeddingMember[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
     const alertedTaskIds = useRef<Set<string>>(new Set())
+    const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
     const ALERT_DAYS_THRESHOLD = 3
+    const AUTO_REFRESH_INTERVAL = 30 * 1000 // 30秒
 
-    // Load initial data
-    useEffect(() => {
-        const loadData = async () => {
-            try {
+    // Load data function
+    const loadData = useCallback(async (isAutoRefresh = false) => {
+        try {
+            if (!isAutoRefresh) {
                 setLoading(true)
-                setError(null)
-                const [categoriesData, membersData, tasksData] = await Promise.all([
-                    api.getCategories(),
-                    api.getMembers(),
-                    api.getTasks(),
-                ])
-                setCategories(categoriesData)
-                setMembers(membersData)
-                setTasks(tasksData)
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to load data')
-            } finally {
+            }
+            setError(null)
+            const [categoriesData, membersData, tasksData] = await Promise.all([
+                api.getCategories(),
+                api.getMembers(),
+                api.getTasks(),
+            ])
+            setCategories(categoriesData)
+            setMembers(membersData)
+            setTasks(tasksData)
+            setLastUpdated(new Date())
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load data')
+        } finally {
+            if (!isAutoRefresh) {
                 setLoading(false)
             }
         }
-        loadData()
     }, [])
+
+    // Load initial data
+    useEffect(() => {
+        loadData()
+    }, [loadData])
+
+    // Auto refresh
+    useEffect(() => {
+        const startAutoRefresh = () => {
+            if (autoRefreshIntervalRef.current) {
+                clearInterval(autoRefreshIntervalRef.current)
+            }
+            autoRefreshIntervalRef.current = setInterval(() => {
+                loadData(true)
+            }, AUTO_REFRESH_INTERVAL)
+        }
+
+        startAutoRefresh()
+
+        return () => {
+            if (autoRefreshIntervalRef.current) {
+                clearInterval(autoRefreshIntervalRef.current)
+            }
+        }
+    }, [loadData, AUTO_REFRESH_INTERVAL])
+
+    // Manual refresh function
+    const refreshData = useCallback(() => {
+        loadData()
+    }, [loadData])
 
     const addCategory = useCallback(async (input: AddCategoryInput) => {
         const name = input.name.trim()
@@ -686,6 +721,8 @@ export const useWeddingTaskBoard = () => {
         membersMap,
         loading,
         error,
+        lastUpdated,
+        refreshData,
         addCategory,
         addTask,
         toggleTask,
