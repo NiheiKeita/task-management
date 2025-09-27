@@ -1,15 +1,16 @@
-import { Meta, StoryObj } from '@storybook/react'
+import type { Meta, StoryObj } from '@storybook/react'
 import { Top } from '.'
 
 const meta: Meta<typeof Top> = {
+    title: 'Pages/Web/Top',
     component: Top,
-    tags: ['autodocs'],
+    parameters: {
+        layout: 'fullscreen',
+    },
 }
+
 export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const Test: Story = {
-    play: async () => {
-    },
-}
+export const Default: Story = {}
