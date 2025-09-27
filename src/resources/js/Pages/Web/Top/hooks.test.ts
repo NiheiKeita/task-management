@@ -11,8 +11,8 @@ import {
 import type { WeddingCategory, WeddingTask } from './hooks'
 
 const baseCategories: WeddingCategory[] = [
-    { id: 'cat-a', name: '前撮り', accent: 'sky' },
-    { id: 'cat-b', name: '会場装飾', accent: 'blush' },
+    { id: 'cat-a', name: '前撮り', accent: 'sky', emoji: '📷' },
+    { id: 'cat-b', name: '会場装飾', accent: 'blush', emoji: '🎀' },
 ]
 
 const baseTasks: WeddingTask[] = [
@@ -39,11 +39,11 @@ const baseTasks: WeddingTask[] = [
 ]
 
 test('addCategoryToList appends unique categories and ignores duplicates', () => {
-    const added = addCategoryToList(baseCategories, { name: 'ヘアメイク', accent: 'lavender' })
+    const added = addCategoryToList(baseCategories, { name: 'ヘアメイク', accent: 'lavender', emoji: '💄' })
     assert.equal(added.length, 3)
     assert.equal(added[2].name, 'ヘアメイク')
 
-    const duplicated = addCategoryToList(added, { name: '前撮り', accent: 'sunny' })
+    const duplicated = addCategoryToList(added, { name: '前撮り', accent: 'sunny', emoji: '🌻' })
     assert.equal(duplicated.length, 3)
 })
 

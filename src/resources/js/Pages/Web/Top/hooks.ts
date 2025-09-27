@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { api } from './api'
 
 export type AccentToken = 'blush' | 'mint' | 'lavender' | 'sunny' | 'sky'
 
@@ -6,6 +7,7 @@ export type WeddingCategory = {
     id: string
     name: string
     accent: AccentToken
+    emoji: string
 }
 
 export type WeddingTask = {
@@ -41,7 +43,7 @@ export type AccentStyle = {
     shadow: string
 }
 
-type AddTaskInput = {
+export type AddTaskInput = {
     title: string
     categoryId: string
     emoji: string
@@ -50,9 +52,10 @@ type AddTaskInput = {
     assigneeIds: string[]
 }
 
-type AddCategoryInput = {
+export type AddCategoryInput = {
     name: string
     accent: AccentToken
+    emoji: string
 }
 
 type WeddingBoardSummary = {
@@ -62,7 +65,15 @@ type WeddingBoardSummary = {
     averageProgress: number
 }
 
-type AddMemberInput = {
+export type AddMemberInput = {
+    name: string
+    role?: string
+    contactEmail?: string
+    contactLineId?: string
+}
+
+export type UpdateMemberInput = {
+    id: string
     name: string
     role?: string
     contactEmail?: string
@@ -127,16 +138,19 @@ const INITIAL_CATEGORIES: WeddingCategory[] = [
         id: 'cat-pre',
         name: '前撮り',
         accent: 'sky',
+        emoji: '📷',
     },
     {
         id: 'cat-attire',
         name: 'ドレス・タキシード決定',
         accent: 'lavender',
+        emoji: '👗',
     },
     {
         id: 'cat-welcome',
         name: 'ウェルカム準備',
         accent: 'blush',
+        emoji: '🌸',
     },
 ]
 
@@ -213,6 +227,7 @@ const createCategory = (input: AddCategoryInput): WeddingCategory => ({
     id: createId('cat'),
     name: input.name,
     accent: input.accent,
+    emoji: input.emoji,
 })
 
 const createTask = (input: AddTaskInput): WeddingTask => ({
@@ -303,6 +318,35 @@ const addMemberToList = (members: WeddingMember[], input: AddMemberInput): Weddi
     ]
 }
 
+const updateMemberInList = (members: WeddingMember[], input: UpdateMemberInput): WeddingMember[] => {
+    const name = input.name.trim()
+    if (!name) {
+        return members
+    }
+
+    // 同じ名前の他のメンバーがいないかチェック（自分以外）
+    if (members.some(member => member.name === name && member.id !== input.id)) {
+        return members
+    }
+
+    return members.map(member => {
+        if (member.id === input.id) {
+            return {
+                ...member,
+                name,
+                role: input.role?.trim() || undefined,
+                contactEmail: input.contactEmail?.trim() || undefined,
+                contactLineId: input.contactLineId?.trim() || undefined,
+            }
+        }
+        return member
+    })
+}
+
+const removeMemberFromList = (members: WeddingMember[], memberId: string): WeddingMember[] => {
+    return members.filter(member => member.id !== memberId)
+}
+
 const assignMembersToTask = (tasks: WeddingTask[], taskId: string, assigneeIds: string[]): WeddingTask[] => (
     tasks.map(task => (
         task.id === taskId
@@ -312,25 +356,56 @@ const assignMembersToTask = (tasks: WeddingTask[], taskId: string, assigneeIds: 
 )
 
 export const useWeddingTaskBoard = () => {
-    const [categories, setCategories] = useState<WeddingCategory[]>(INITIAL_CATEGORIES)
-    const [tasks, setTasks] = useState<WeddingTask[]>(INITIAL_TASKS)
-    const [members, setMembers] = useState<WeddingMember[]>(INITIAL_MEMBERS)
+    const [categories, setCategories] = useState<WeddingCategory[]>([])
+    const [tasks, setTasks] = useState<WeddingTask[]>([])
+    const [members, setMembers] = useState<WeddingMember[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const alertedTaskIds = useRef<Set<string>>(new Set())
     const ALERT_DAYS_THRESHOLD = 3
 
-    const addCategory = useCallback((input: AddCategoryInput) => {
+    // Load initial data
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                setLoading(true)
+                setError(null)
+                const [categoriesData, membersData, tasksData] = await Promise.all([
+                    api.getCategories(),
+                    api.getMembers(),
+                    api.getTasks(),
+                ])
+                setCategories(categoriesData)
+                setMembers(membersData)
+                setTasks(tasksData)
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to load data')
+            } finally {
+                setLoading(false)
+            }
+        }
+        loadData()
+    }, [])
+
+    const addCategory = useCallback(async (input: AddCategoryInput) => {
         const name = input.name.trim()
         if (!name) {
             return
         }
 
-        setCategories(previous => addCategoryToList(previous, {
-            name,
-            accent: input.accent,
-        }))
+        try {
+            const newCategory = await api.createCategory({
+                name,
+                accent: input.accent,
+                emoji: input.emoji,
+            })
+            setCategories(previous => [...previous, newCategory])
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to add category')
+        }
     }, [])
 
-    const addTask = useCallback((input: AddTaskInput) => {
+    const addTask = useCallback(async (input: AddTaskInput) => {
         const title = input.title.trim()
         const notes = input.notes?.trim() || undefined
         const due = input.due?.trim() || undefined
@@ -340,38 +415,130 @@ export const useWeddingTaskBoard = () => {
             return
         }
 
-        setTasks(previous => addTaskToList(previous, categories, {
-            title,
-            categoryId: input.categoryId,
-            emoji: input.emoji,
-            notes,
-            due,
-            assigneeIds,
-        }))
+        try {
+            const category = categories.find(cat => cat.id === input.categoryId)
+            if (!category) return
+
+            const newTask = await api.createTask({
+                title,
+                categoryId: input.categoryId,
+                emoji: input.emoji,
+                notes,
+                due,
+                assigneeIds,
+            }, category.emoji)
+            setTasks(previous => [...previous, newTask])
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to add task')
+        }
     }, [categories, members])
 
-    const toggleTask = useCallback((taskId: string) => {
-        setTasks(previous => toggleTaskInList(previous, taskId))
+    const toggleTask = useCallback(async (taskId: string) => {
+        try {
+            const task = tasks.find(t => t.id === taskId)
+            if (!task) return
+
+            const newStatus: TaskStatus = task.isDone ? 'not_started' : 'done'
+            const updatedTask = await api.updateTask(taskId, {
+                status: newStatus,
+                isDone: !task.isDone
+            })
+            setTasks(previous => previous.map(t => t.id === taskId ? updatedTask : t))
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to toggle task')
+        }
+    }, [tasks])
+
+    const updateTaskStatus = useCallback(async (taskId: string, status: TaskStatus) => {
+        try {
+            const updatedTask = await api.updateTask(taskId, {
+                status,
+                isDone: status === 'done'
+            })
+            setTasks(previous => previous.map(t => t.id === taskId ? updatedTask : t))
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update task status')
+        }
     }, [])
 
-    const updateTaskStatus = useCallback((taskId: string, status: TaskStatus) => {
-        setTasks(previous => updateTaskStatusInList(previous, taskId, status))
+    const clearCompleted = useCallback(async () => {
+        try {
+            const completedTasks = tasks.filter(task => task.isDone)
+            await Promise.all(completedTasks.map(task => api.deleteTask(task.id)))
+            setTasks(previous => clearCompletedTasks(previous))
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to clear completed tasks')
+        }
+    }, [tasks])
+
+    const removeTask = useCallback(async (taskId: string) => {
+        try {
+            await api.deleteTask(taskId)
+            setTasks(previous => removeTaskFromList(previous, taskId))
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to remove task')
+        }
     }, [])
 
-    const clearCompleted = useCallback(() => {
-        setTasks(previous => clearCompletedTasks(previous))
+    const assignMembers = useCallback(async (taskId: string, assigneeIds: string[]) => {
+        try {
+            const updatedTask = await api.updateTask(taskId, { assigneeIds })
+            setTasks(previous => previous.map(t => t.id === taskId ? updatedTask : t))
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to assign members')
+        }
     }, [])
 
-    const removeTask = useCallback((taskId: string) => {
-        setTasks(previous => removeTaskFromList(previous, taskId))
-    }, [])
+    const addMember = useCallback(async (input: AddMemberInput) => {
+        const name = input.name.trim()
+        if (!name) {
+            return
+        }
 
-    const assignMembers = useCallback((taskId: string, assigneeIds: string[]) => {
-        setTasks(previous => assignMembersToTask(previous, taskId, assigneeIds))
-    }, [])
+        if (members.some(member => member.name === name)) {
+            return
+        }
 
-    const addMember = useCallback((input: AddMemberInput) => {
-        setMembers(previous => addMemberToList(previous, input))
+        try {
+            const newMember = await api.createMember(input)
+            setMembers(previous => [...previous, newMember])
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to add member')
+        }
+    }, [members])
+
+    const updateMember = useCallback(async (input: UpdateMemberInput) => {
+        const name = input.name.trim()
+        if (!name) {
+            return
+        }
+
+        if (members.some(member => member.name === name && member.id !== input.id)) {
+            return
+        }
+
+        try {
+            const updatedMember = await api.updateMember(input)
+            setMembers(previous => previous.map(member =>
+                member.id === input.id ? updatedMember : member
+            ))
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update member')
+        }
+    }, [members])
+
+    const removeMember = useCallback(async (memberId: string) => {
+        try {
+            await api.deleteMember(memberId)
+            setMembers(previous => removeMemberFromList(previous, memberId))
+            // メンバーを削除した場合、そのメンバーが担当していたタスクからも削除
+            setTasks(previous => previous.map(task => ({
+                ...task,
+                assigneeIds: task.assigneeIds.filter(id => id !== memberId)
+            })))
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to remove member')
+        }
     }, [])
 
     const summary = useMemo<WeddingBoardSummary>(() => {
@@ -401,6 +568,7 @@ export const useWeddingTaskBoard = () => {
             id: category.id,
             name: category.name,
             accent: category.accent,
+            emoji: category.emoji,
         }))
     ), [categories])
 
@@ -516,6 +684,8 @@ export const useWeddingTaskBoard = () => {
         overdueTasks,
         calendarEvents,
         membersMap,
+        loading,
+        error,
         addCategory,
         addTask,
         toggleTask,
@@ -523,6 +693,8 @@ export const useWeddingTaskBoard = () => {
         clearCompleted,
         removeTask,
         addMember,
+        updateMember,
+        removeMember,
         assignMembers,
     }
 }

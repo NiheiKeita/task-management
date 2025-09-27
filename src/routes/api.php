@@ -2,6 +2,9 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\WeddingCategoryController;
+use App\Http\Controllers\Api\WeddingMemberController;
+use App\Http\Controllers\Api\WeddingTaskController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,4 +19,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
+});
+
+Route::group(['middleware' => 'basicauth'], function () {
+    Route::apiResource('wedding-categories', WeddingCategoryController::class);
+    Route::apiResource('wedding-members', WeddingMemberController::class);
+    Route::apiResource('wedding-tasks', WeddingTaskController::class);
 });

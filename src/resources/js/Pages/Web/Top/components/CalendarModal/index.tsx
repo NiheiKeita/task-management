@@ -13,6 +13,8 @@ type CalendarModalProps = {
     isOpen: boolean
     onClose: () => void
     events: CalendarEvent[]
+    onDateSelect?: (date: string) => void
+    showDateSelection?: boolean
 }
 
 const STATUS_BADGE: Record<TaskStatus, string> = {
@@ -44,7 +46,7 @@ const getCalendarDays = (anchor: Date) => {
     })
 }
 
-export const CalendarModal = ({ isOpen, onClose, events }: CalendarModalProps) => {
+export const CalendarModal = ({ isOpen, onClose, events, onDateSelect, showDateSelection = false }: CalendarModalProps) => {
     const [monthOffset, setMonthOffset] = useState(0)
 
     const today = useMemo(() => new Date(), [])
@@ -64,6 +66,7 @@ export const CalendarModal = ({ isOpen, onClose, events }: CalendarModalProps) =
             }
             map.get(key)?.push(event)
         })
+
         return map
     }, [events])
 
@@ -77,7 +80,6 @@ export const CalendarModal = ({ isOpen, onClose, events }: CalendarModalProps) =
                 <div className='flex items-center justify-between gap-3'>
                     <div>
                         <h2 className='text-xl font-bold text-rose-500'>カレンダー</h2>
-                        <p className='text-xs text-gray-500'>期限付きタスクをカレンダーで確認できます</p>
                     </div>
                     <div className='flex items-center gap-2'>
                         <button
@@ -99,9 +101,9 @@ export const CalendarModal = ({ isOpen, onClose, events }: CalendarModalProps) =
                     <button
                         type='button'
                         onClick={onClose}
-                        className='rounded-full border border-rose-100 bg-rose-50 px-3 py-1 text-sm font-semibold text-rose-500 hover:bg-rose-100'
+                        className='flex h-8 w-8 items-center justify-center rounded-full text-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600'
                     >
-                        閉じる
+                        ×
                     </button>
                 </div>
                 <div className='mt-4 grid grid-cols-7 gap-2 text-[11px] font-semibold'>
@@ -119,7 +121,7 @@ export const CalendarModal = ({ isOpen, onClose, events }: CalendarModalProps) =
                         </div>
                     ))}
                 </div>
-                <div className='mt-2 grid flex-1 grid-cols-7 gap-2 overflow-auto text-[11px]'>
+                <div className='mt-2 grid flex-1 grid-cols-7 gap-1 overflow-auto text-[11px] sm:gap-2'>
                     {calendarDays.map(day => {
                         const key = formatDateKey(day)
                         const monthDiff = day.getMonth() - displayDate.getMonth()
@@ -127,25 +129,36 @@ export const CalendarModal = ({ isOpen, onClose, events }: CalendarModalProps) =
                         const isToday = formatDateKey(day) === formatDateKey(today)
                         const dayEvents = eventsByDate.get(key) ?? []
 
+
+                        const handleDateClick = () => {
+                            if (showDateSelection && onDateSelect && isCurrentMonth) {
+                                onDateSelect(key)
+                                onClose()
+                            }
+                        }
+
                         return (
                             <div
                                 key={key}
-                                className={`flex flex-col gap-1 rounded-2xl border p-2 ${isCurrentMonth ? 'border-rose-100 bg-rose-50/40' : 'border-transparent bg-white/40 text-gray-400'} ${isToday ? 'ring-2 ring-rose-200' : ''}`}
+                                className={`flex flex-col gap-1 p-1 sm:p-2 ${isCurrentMonth ? 'bg-transparent' : 'bg-transparent text-gray-400'} ${isToday ? 'rounded-lg bg-rose-50 ring-1 ring-rose-200' : ''} ${showDateSelection && isCurrentMonth ? 'cursor-pointer hover:bg-rose-50 hover:rounded-lg' : ''}`}
+                                onClick={handleDateClick}
                             >
                                 <span
-                                    className={`text-right text-[10px] font-semibold ${day.getDay() === 0 ? 'text-rose-500' : day.getDay() === 6 ? 'text-sky-500' : 'text-gray-600'}`}
+                                    className={`text-right text-xs font-bold ${day.getDay() === 0 ? 'text-rose-500' : day.getDay() === 6 ? 'text-sky-500' : 'text-gray-700'} ${!isCurrentMonth ? 'text-gray-400' : ''}`}
                                 >
                                     {day.getDate()}
                                 </span>
-                                <div className='flex flex-col gap-1'>
-                                    {dayEvents.length === 0 ? (
-                                        <span className='text-[10px] text-gray-400'>予定なし</span>
-                                    ) : dayEvents.map(event => (
-                                        <div key={event.id} className={`flex flex-col gap-1 rounded-lg px-2 py-1 ${STATUS_BADGE[event.status]}`}>
-                                            <span className='truncate text-[10px] font-semibold'>{event.title}</span>
-                                            {event.assignees.length > 0 ? (
-                                                <span className='truncate text-[9px] opacity-80'>担当: {event.assignees.join(', ')}</span>
-                                            ) : null}
+                                <div className='flex flex-col gap-0.5'>
+                                    {dayEvents.map(event => (
+                                        <div key={event.id} className='text-[9px] sm:text-[10px]'>
+                                            <div className={`inline-block rounded px-1 py-0.5 font-medium ${STATUS_BADGE[event.status]}`}>
+                                                {event.title}
+                                            </div>
+                                            {event.assignees.length > 0 && (
+                                                <div className='mt-0.5 text-[8px] text-gray-500'>
+                                                    {event.assignees.join(', ')}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
