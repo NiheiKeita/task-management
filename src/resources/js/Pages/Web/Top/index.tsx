@@ -271,10 +271,10 @@ export const Top = React.memo(function Top() {
     // Loading state
     if (loading) {
         return (
-            <div className='min-h-screen bg-gradient-to-br from-pink-50 via-white to-sky-50 flex items-center justify-center'>
+            <div className='flex min-h-screen items-center justify-center bg-gradient-to-br from-pink-50 via-white to-sky-50'>
                 <div className='text-center'>
-                    <div className='w-8 h-8 border-4 border-rose-200 border-t-rose-500 rounded-full animate-spin mx-auto mb-4'></div>
-                    <p className='text-rose-500 font-semibold'>{t('loadingData')}</p>
+                    <div className='mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-rose-200 border-t-rose-500'></div>
+                    <p className='font-semibold text-rose-500'>{t('loadingData')}</p>
                 </div>
             </div>
         )
@@ -283,14 +283,14 @@ export const Top = React.memo(function Top() {
     // Error state
     if (error) {
         return (
-            <div className='min-h-screen bg-gradient-to-br from-pink-50 via-white to-sky-50 flex items-center justify-center px-4'>
-                <div className='text-center max-w-md'>
-                    <div className='text-6xl mb-4'>⚠️</div>
-                    <h2 className='text-xl font-bold text-rose-600 mb-2'>{t('errorOccurred')}</h2>
-                    <p className='text-gray-600 mb-4'>{error}</p>
+            <div className='flex min-h-screen items-center justify-center bg-gradient-to-br from-pink-50 via-white to-sky-50 px-4'>
+                <div className='max-w-md text-center'>
+                    <div className='mb-4 text-6xl'>⚠️</div>
+                    <h2 className='mb-2 text-xl font-bold text-rose-600'>{t('errorOccurred')}</h2>
+                    <p className='mb-4 text-gray-600'>{error}</p>
                     <button
                         onClick={() => window.location.reload()}
-                        className='px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition'
+                        className='rounded-lg bg-rose-500 px-4 py-2 text-white transition hover:bg-rose-600'
                     >
                         {t('reloadPage')}
                     </button>
@@ -311,7 +311,7 @@ export const Top = React.memo(function Top() {
                             <select
                                 value={language}
                                 onChange={(e) => setLanguage(e.target.value as Language)}
-                                className='flex h-8 w-20 md:w-24 items-center justify-center rounded-lg bg-green-50 px-3 text-[10px] leading-none font-semibold text-green-600 shadow-md transition hover:bg-green-100 focus:outline-none focus:ring-1 focus:ring-green-300'
+                                className='flex h-8 w-20 items-center justify-center rounded-lg bg-green-50 px-3 text-[10px] font-semibold leading-none text-green-600 shadow-md transition hover:bg-green-100 focus:outline-none focus:ring-1 focus:ring-green-300 md:w-24'
                             >
                                 {Object.entries(languageNames).map(([code, name]) => (
                                     <option key={code} value={code}>
@@ -339,7 +339,7 @@ export const Top = React.memo(function Top() {
                         </button>
                         {/* 最終更新時間 */}
                         {lastUpdated && (
-                            <span className='text-[9px] md:text-[10px] text-blue-500 font-medium'>
+                            <span className='text-[9px] font-medium text-blue-500 md:text-[10px]'>
                                 {t('lastUpdated')}: {lastUpdated.toLocaleTimeString(language === 'ko' ? 'ko-KR' : language === 'en' ? 'en-US' : 'ja-JP', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                         )}
@@ -358,36 +358,36 @@ export const Top = React.memo(function Top() {
                     </div>
                 </div>
 
-                <header className='rounded-3xl bg-white/80 p-4 md:p-6 shadow-xl backdrop-blur mb-4'>
+                <header className='mb-4 rounded-3xl bg-white/80 p-4 shadow-xl backdrop-blur md:p-6'>
                     <div className='flex flex-col items-center gap-3 text-center'>
-                        <h1 className='text-4xl md:text-6xl lg:text-7xl font-extrabold text-rose-500' style={{ fontFamily: "'Dancing Script', cursive" }}>
+                        <h1 className='text-4xl font-extrabold text-rose-500 md:text-6xl lg:text-7xl' style={{ fontFamily: "'Dancing Script', cursive" }}>
                             💐 {t('title')} 💐
                         </h1>
-                        <div className='flex flex-wrap items-center justify-center gap-2 md:gap-4 text-[10px] md:text-xs lg:text-sm font-semibold text-gray-500'>
+                        <div className='flex flex-wrap items-center justify-center gap-2 text-[10px] font-semibold text-gray-500 md:gap-4 md:text-xs lg:text-sm'>
                             <span>{t('weddingDate')}</span>
                             <span>{t('venue')}</span>
                         </div>
                     </div>
                 </header>
-                <div className='flex items-center gap-2 md:gap-4 mb-4 w-[90%] mx-auto'>
+                <div className='mx-auto mb-4 flex w-[90%] items-center gap-2 md:gap-4'>
                     <button
                         type='button'
                         onClick={() => setTaskModalOpen(true)}
-                        className='flex-[5] flex items-center justify-center gap-2 rounded-2xl bg-rose-400 px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-200'
+                        className='flex flex-[5] items-center justify-center gap-2 rounded-2xl bg-rose-400 px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-200'
                     >
                         ✨ {t('addNewTask')}
                     </button>
                     <button
                         type='button'
                         onClick={() => setCalendarOpen(true)}
-                        className='flex-[3] inline-flex items-center justify-center gap-1 rounded-full bg-amber-50 px-3 py-3 text-xs font-semibold text-amber-600 shadow hover:bg-amber-100'
+                        className='inline-flex flex-[3] items-center justify-center gap-1 rounded-full bg-amber-50 px-3 py-3 text-xs font-semibold text-amber-600 shadow hover:bg-amber-100'
                     >
                         📅 カレンダー
                     </button>
                 </div>
                 <div className='flex flex-col gap-4 md:flex-row md:items-start'>
 
-                    <section className='hidden md:block w-full rounded-3xl bg-white/75 p-3 shadow-xl backdrop-blur md:max-w-xs'>
+                    <section className='hidden w-full rounded-3xl bg-white/75 p-3 shadow-xl backdrop-blur md:block md:max-w-xs'>
                         <div className='space-y-3'>
                             <button
                                 type='button'
@@ -586,8 +586,8 @@ export const Top = React.memo(function Top() {
         >
             <div className='space-y-4'>
                 <div>
-                    <h3 className='text-sm font-semibold text-gray-700 mb-3'>現在のメンバー</h3>
-                    <ul className='space-y-2 text-[12px] text-gray-600 max-h-32 overflow-y-auto'>
+                    <h3 className='mb-3 text-sm font-semibold text-gray-700'>現在のメンバー</h3>
+                    <ul className='max-h-32 space-y-2 overflow-y-auto text-[12px] text-gray-600'>
                         {members.length === 0 ? (
                             <li className='rounded-lg bg-gray-50 px-3 py-2 text-gray-400'>メンバーがまだいません</li>
                         ) : members.map(member => (
@@ -613,7 +613,7 @@ export const Top = React.memo(function Top() {
                                                 contactEmail: member.contactEmail || '',
                                                 contactLineId: member.contactLineId || ''
                                             })}
-                                            className='text-[9px] text-blue-500 hover:text-blue-600 underline'
+                                            className='text-[9px] text-blue-500 underline hover:text-blue-600'
                                         >
                                             編集
                                         </button>
@@ -624,7 +624,7 @@ export const Top = React.memo(function Top() {
                                                     removeMember(member.id)
                                                 }
                                             }}
-                                            className='text-[9px] text-rose-500 hover:text-rose-600 underline'
+                                            className='text-[9px] text-rose-500 underline hover:text-rose-600'
                                         >
                                             削除
                                         </button>
@@ -636,7 +636,7 @@ export const Top = React.memo(function Top() {
                 </div>
 
                 <div className='border-t pt-4'>
-                    <h3 className='text-sm font-semibold text-gray-700 mb-3'>新しいメンバーを追加</h3>
+                    <h3 className='mb-3 text-sm font-semibold text-gray-700'>新しいメンバーを追加</h3>
                     <form onSubmit={handleMemberSubmit} className='grid gap-3 text-[13px]'>
                         <label className='flex flex-col gap-1 font-semibold text-gray-600'>
                             <span>メンバー名</span>
@@ -692,8 +692,8 @@ export const Top = React.memo(function Top() {
 
                 {/* メンバー編集フォーム */}
                 {editingMember && (
-                    <div className='border-t pt-4 mt-4'>
-                        <h3 className='text-sm font-semibold text-gray-700 mb-3'>メンバーを編集</h3>
+                    <div className='mt-4 border-t pt-4'>
+                        <h3 className='mb-3 text-sm font-semibold text-gray-700'>メンバーを編集</h3>
                         <form onSubmit={(event) => {
                             event.preventDefault()
                             updateMember({

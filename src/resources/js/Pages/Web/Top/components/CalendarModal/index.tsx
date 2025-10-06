@@ -228,7 +228,7 @@ export const CalendarModal = ({ isOpen, onClose, events, onDateSelect, showDateS
                         return (
                             <div
                                 key={key}
-                                className={`flex flex-col gap-1 p-1 sm:p-2 ${isCurrentMonth ? 'bg-transparent' : 'bg-transparent text-gray-400'} ${isToday ? 'rounded-lg bg-rose-50 ring-1 ring-rose-200' : ''} ${showDateSelection && isCurrentMonth ? 'cursor-pointer hover:bg-rose-50 hover:rounded-lg' : ''}`}
+                                className={`flex flex-col gap-1 p-1 sm:p-2 ${isCurrentMonth ? 'bg-transparent' : 'bg-transparent text-gray-400'} ${isToday ? 'rounded-lg bg-rose-50 ring-1 ring-rose-200' : ''} ${showDateSelection && isCurrentMonth ? 'cursor-pointer hover:rounded-lg hover:bg-rose-50' : ''}`}
                                 onClick={handleDateClick}
                             >
                                 <span

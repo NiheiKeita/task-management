@@ -96,7 +96,7 @@ export const TaskCard = React.memo(function TaskCard({
                             <button
                                 type='button'
                                 onClick={() => setAssigning(value => !value)}
-                                className='text-[7px] text-rose-500 hover:text-rose-600 underline ml-0.5'
+                                className='ml-0.5 text-[7px] text-rose-500 underline hover:text-rose-600'
                             >
                                 変更
                             </button>
@@ -110,10 +110,10 @@ export const TaskCard = React.memo(function TaskCard({
                     ) : null}
                 </div>
                 {notes && (
-                    <p className='truncate text-[8px] leading-tight text-gray-600 mt-0.5'>{notes}</p>
+                    <p className='mt-0.5 truncate text-[8px] leading-tight text-gray-600'>{notes}</p>
                 )}
                 {isAssigning && allMembers.length > 0 && (
-                    <div className='flex flex-wrap gap-0.5 rounded border border-white/60 bg-white/90 p-1 mt-1'>
+                    <div className='mt-1 flex flex-wrap gap-0.5 rounded border border-white/60 bg-white/90 p-1'>
                         {allMembers.map(member => {
                             const checked = assignedIds.has(member.id)
                             return (
@@ -140,7 +140,7 @@ export const TaskCard = React.memo(function TaskCard({
                 <select
                     value={status}
                     onChange={event => onStatusChange(event.target.value as TaskStatus)}
-                    className='text-[8px] border-none bg-transparent text-gray-600 focus:outline-none'
+                    className='border-none bg-transparent text-[8px] text-gray-600 focus:outline-none'
                 >
                     <option value='not_started'>未着手</option>
                     <option value='in_progress'>進行中</option>
