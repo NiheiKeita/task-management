@@ -17,10 +17,13 @@ jobs:
       - name: composer install
         run: |
           docker compose exec app composer install
+      - name: wait-for-db
+        run: docker compose exec db mysqladmin ping --silent --wait=30
       - name: Laravel Settings
         run: |
           docker compose exec -T app cp .env.example .env
           docker compose exec -T app php artisan key:generate
+          docker compose exec -T app php artisan migrate
       - name: Run PHPStan
         run: docker compose exec app vendor/bin/phpstan analyze
       - name: composer phpcs .
@@ -29,7 +32,7 @@ jobs:
       - name: phpunit
         run: |
           docker compose exec app vendor/bin/phpunit --debug
-          
+
       - name: npm
         run: |
           npm ci
@@ -37,7 +40,7 @@ jobs:
         run: npm run lint
       - name: typeCheck
         run: npm run type-check
-      - name: Build Storybook 
+      - name: Build Storybook
         run: npm run build-storybook
       - name: Serve Storybook
         run: npx serve storybook-static -l 6006 &
@@ -45,4 +48,3 @@ jobs:
         run: npx playwright install --with-deps
       - name: storybookTest
         run: npm run test-storybook
-
