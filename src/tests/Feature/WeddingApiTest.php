@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use App\Models\WeddingCategory;
-use App\Models\WeddingMember;
 use App\Models\WeddingTask;
 
 class WeddingApiTest extends TestCase
